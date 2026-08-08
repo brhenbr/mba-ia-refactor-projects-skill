@@ -1,15 +1,38 @@
 @baseUrl = http://localhost:3000
 
-### Checkout - sucesso
+### Health check
+GET {{baseUrl}}/health
+
+### Login (seeded admin user) - copy the "token" from the response into @adminToken below
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "leonan@fullcycle.com.br",
+  "password": "123"
+}
+
+### Login - invalid credentials (401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "leonan@fullcycle.com.br",
+  "password": "senha-errada"
+}
+
+@adminToken = COLE_O_TOKEN_AQUI
+
+### Checkout - sucesso (novo usuário)
 POST {{baseUrl}}/api/checkout
 Content-Type: application/json
 
 {
-  "usr": "Guilherme",
-  "eml": "gui@fullcycle.com.br",
-  "pwd": "senhaforte",
-  "c_id": 2,
-  "card": "4111222233334444"
+  "name": "Guilherme",
+  "email": "gui@fullcycle.com.br",
+  "password": "senhaforte",
+  "courseId": 2,
+  "cardNumber": "4111222233334444"
 }
 
 ### Checkout - pagamento recusado
@@ -17,15 +40,31 @@ POST {{baseUrl}}/api/checkout
 Content-Type: application/json
 
 {
-  "usr": "João",
-  "eml": "joao@teste.com",
-  "pwd": "123",
-  "c_id": 1,
-  "card": "5111222233334444"
+  "name": "João",
+  "email": "joao@teste.com",
+  "password": "outrasenha",
+  "courseId": 1,
+  "cardNumber": "5111222233334444"
 }
 
-### Relatório financeiro administrativo
+### Checkout - dados inválidos (400)
+POST {{baseUrl}}/api/checkout
+Content-Type: application/json
+
+{
+  "name": "X",
+  "email": "nao-e-email",
+  "courseId": -1,
+  "cardNumber": "abc"
+}
+
+### Relatório financeiro - sem token (401)
 GET {{baseUrl}}/api/admin/financial-report
 
-### Deletar usuário
+### Relatório financeiro administrativo - requer token de admin
+GET {{baseUrl}}/api/admin/financial-report
+Authorization: Bearer {{adminToken}}
+
+### Deletar usuário - requer token de admin
 DELETE {{baseUrl}}/api/users/1
+Authorization: Bearer {{adminToken}}
