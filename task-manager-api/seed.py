@@ -1,11 +1,13 @@
 """Script para popular o banco com dados iniciais"""
-from app import app, db
+from app import create_app
+from database import db
 from models.task import Task
 from models.user import User
 from models.category import Category
 from datetime import datetime, timedelta
 
 def seed_data():
+    app = create_app('development')
     with app.app_context():
 
         Task.query.delete()
@@ -16,21 +18,21 @@ def seed_data():
         u1 = User()
         u1.name = 'João Silva'
         u1.email = 'joao@email.com'
-        u1.set_password('1234')
+        u1.set_password('senha1234')
         u1.role = 'admin'
         db.session.add(u1)
 
         u2 = User()
         u2.name = 'Maria Santos'
         u2.email = 'maria@email.com'
-        u2.set_password('abcd')
+        u2.set_password('senhaabcd')
         u2.role = 'user'
         db.session.add(u2)
 
         u3 = User()
         u3.name = 'Pedro Oliveira'
         u3.email = 'pedro@email.com'
-        u3.set_password('pass')
+        u3.set_password('senhapedro')
         u3.role = 'manager'
         db.session.add(u3)
 
