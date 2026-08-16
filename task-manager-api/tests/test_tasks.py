@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def _create_task(client, headers, **overrides):
@@ -69,13 +69,13 @@ def test_user_can_delete_own_task(client, user_headers):
 
 
 def test_is_overdue_true_for_past_due_pending_task(client, user_headers):
-    past_date = (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%d")
+    past_date = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%d")
     created = _create_task(client, user_headers, due_date=past_date, status="pending").get_json()
     assert created["overdue"] is True
 
 
 def test_is_overdue_false_for_done_task(client, user_headers):
-    past_date = (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%d")
+    past_date = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%d")
     created = _create_task(client, user_headers, due_date=past_date, status="done").get_json()
     assert created["overdue"] is False
 

@@ -1,6 +1,6 @@
 # Anti-Patterns & Code Smells
 
-Catalogo de 10+ anti-patterns identificados em projetos legados, com severidade, impacto, exemplos e estratégias de correção.
+Catálogo de 12+ anti-patterns identificados em projetos legados, com severidade, impacto, exemplos e estratégias de correção. Cobre as quatro severidades (CRITICAL, HIGH, MEDIUM, LOW) e inclui detecção de APIs/métodos deprecated.
 
 ---
 
@@ -1111,6 +1111,149 @@ Veja `refactoring-playbook.md` → **Playbook #10: Validação Centralizada**
 
 ---
 
+## 11. Uso de APIs e Métodos Deprecated
+
+**Severidade:** 🟡 MEDIUM
+**Categoria:** Manutenibilidade / Modernização
+**Frequência:** Alto em código legado sem manutenção ativa
+
+### Descrição
+Chamar funções, métodos ou pacotes que o próprio runtime/framework/biblioteca já marcou como deprecated (descontinuados). O código funciona hoje, mas emite warnings, perde correções de segurança e pode quebrar em uma futura major version — é dívida técnica silenciosa que só aparece quando o upgrade se torna obrigatório.
+
+### Impacto
+- **Manutenibilidade:** upgrades de dependência quebram em produção sem aviso prévio
+- **Segurança:** APIs deprecated às vezes o são justamente por falhas de segurança (ex.: geração de datas sem timezone, criptografia legada)
+- **Confiabilidade:** comportamento pode mudar silenciosamente entre versões antes da remoção definitiva
+
+### Sinais de Detecção
+- Grep por chamadas conhecidas como deprecated na stack detectada na Fase 1 (ex.: `datetime.utcnow()` em Python ≥3.12, `@app.before_first_request` em Flask ≥2.3, `new Buffer()` em Node.js, `url.parse()` em favor de `URL`, middleware `body-parser` standalone quando o framework já embute equivalente)
+- `DeprecationWarning` / `FutureWarning` no console ao rodar a aplicação ou a suíte de testes
+- Versão da dependência no manifesto (`requirements.txt`, `package.json`) mais antiga que a versão mínima recomendada pelo mantenedor (changelog/release notes do pacote)
+
+### Exemplo Problemático
+
+```python
+# ❌ Python — datetime.utcnow() é deprecated desde Python 3.12
+from datetime import datetime
+
+def registrar_evento():
+    return {'timestamp': datetime.utcnow()}  # DeprecationWarning; sem timezone info
+```
+
+```javascript
+// ❌ Node.js — new Buffer() é deprecated desde Node 6, removido em versões futuras
+const dados = new Buffer('conteudo');  // DeprecationWarning: Buffer() is deprecated
+
+// ❌ url.parse() é deprecated em favor da API WHATWG URL
+const url = require('url');
+const parsed = url.parse(req.url, true);
+```
+
+### Solução ✅
+
+```python
+# ✅ Python — timezone-aware, API atual
+from datetime import datetime, timezone
+
+def registrar_evento():
+    return {'timestamp': datetime.now(timezone.utc)}
+```
+
+```javascript
+// ✅ Node.js — API atual, sem warnings
+const dados = Buffer.from('conteudo');
+
+const parsed = new URL(req.url, `http://${req.headers.host}`);
+```
+
+### Regras
+- ✅ Rodar a aplicação/testes e checar o console por `DeprecationWarning`/`FutureWarning` antes de considerar a Fase 3 concluída
+- ✅ Consultar o changelog da versão instalada de cada dependência principal (framework, ORM, driver de banco)
+- ✅ Substituir sempre pela API atual equivalente, nunca silenciar o warning
+- ✅ Fixar versões no manifesto de dependências (não usar `*`/ranges muito abertos) para evitar deprecations surpresa
+
+### Playbook
+Veja `refactoring-playbook.md` → **Playbook #11: Substituir APIs Deprecated**
+
+---
+
+## 12. Magic Numbers e Nomenclatura Pouco Descritiva
+
+**Severidade:** 🔵 LOW
+**Categoria:** Legibilidade
+**Frequência:** Muito Alto
+
+### Descrição
+Valores numéricos ou de string soltos no meio da lógica sem nome que explique seu significado ("magic numbers"), e nomes de variáveis/parâmetros abreviados demais (`u`, `t`, `d`, `cc`) que obrigam quem lê o código a inferir o que representam. Não quebra a aplicação, mas aumenta o tempo de leitura e o risco de erro ao alterar o valor no lugar errado.
+
+### Impacto
+- **Legibilidade:** exige contexto externo (ou adivinhação) para entender o código
+- **Manutenibilidade:** o mesmo "magic number" costuma ser copiado em vários lugares; mudar a regra de negócio exige achar todas as ocorrências manualmente
+- **Onboarding:** aumenta a curva de entrada para novos desenvolvedores no projeto
+
+### Exemplo Problemático
+
+```python
+# ❌ Magic numbers e nomes abreviados
+def calcular_desconto(p, qtd):
+    if qtd > 10:
+        return p * 0.85  # o que é 0.85? por que 10?
+    return p
+
+for t in tasks:  # t = task, mas só quem escreveu sabe
+    if t.priority > 3:  # o que significa prioridade > 3?
+        ...
+```
+
+```javascript
+// ❌ Magic numbers e nomes abreviados
+function processarPagamento(cc, e, u) {
+    if (cc.length !== 16) { ... }       // por que 16?
+    setTimeout(() => reenviar(e), 3600000);  // o que é esse número?
+}
+```
+
+### Solução ✅
+
+```python
+# ✅ Constantes nomeadas e nomes completos
+DESCONTO_ATACADO = 0.85
+QUANTIDADE_MINIMA_ATACADO = 10
+
+def calcular_desconto(preco, quantidade):
+    if quantidade > QUANTIDADE_MINIMA_ATACADO:
+        return preco * DESCONTO_ATACADO
+    return preco
+
+PRIORIDADE_ALTA = 3
+
+for task in tasks:
+    if task.priority > PRIORIDADE_ALTA:
+        ...
+```
+
+```javascript
+// ✅ Constantes nomeadas e nomes completos
+const CREDIT_CARD_LENGTH = 16;
+const RETRY_DELAY_MS = 60 * 60 * 1000; // 1 hora
+
+function processarPagamento(creditCard, email, user) {
+    if (creditCard.length !== CREDIT_CARD_LENGTH) { ... }
+    setTimeout(() => reenviar(email), RETRY_DELAY_MS);
+}
+```
+
+### Regras
+- ✅ Extrair valores numéricos/string repetidos ou não-óbvios para constantes nomeadas
+- ✅ Nome da constante explica o "porquê", não repete o valor (`QUANTIDADE_MINIMA_ATACADO`, não `DEZ`)
+- ✅ Parâmetros e variáveis com nome completo e descritivo (`user`, `task`, `creditCard` em vez de `u`, `t`, `cc`)
+- ✅ Exceção aceitável: índices de loop puramente locais (`i`, `j`) em laços curtos e óbvios
+
+### Playbook
+Veja `refactoring-playbook.md` → **Playbook #12: Eliminar Magic Numbers e Renomear Variáveis**
+
+---
+
 ## Resumo de Severidades
 
 | Anti-Pattern | Severidade | Categoria |
@@ -1125,6 +1268,8 @@ Veja `refactoring-playbook.md` → **Playbook #10: Validação Centralizada**
 | Variáveis Globais | MEDIUM | Confiabilidade |
 | Exception Genérica | MEDIUM | Qualidade |
 | Validação Inconsistente | MEDIUM | Qualidade |
+| APIs Deprecated | MEDIUM | Manutenibilidade / Modernização |
+| Magic Numbers / Nomenclatura | LOW | Legibilidade |
 
 ## Próximos Passos
 

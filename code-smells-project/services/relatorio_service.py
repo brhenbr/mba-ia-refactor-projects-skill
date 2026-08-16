@@ -3,6 +3,13 @@ from sqlalchemy import func
 from database import db
 from models.pedido import Pedido
 
+FATURAMENTO_MINIMO_DESCONTO_ALTO = 10000
+DESCONTO_ALTO = 0.1
+FATURAMENTO_MINIMO_DESCONTO_MEDIO = 5000
+DESCONTO_MEDIO = 0.05
+FATURAMENTO_MINIMO_DESCONTO_BAIXO = 1000
+DESCONTO_BAIXO = 0.02
+
 
 class RelatorioService:
     def vendas(self):
@@ -31,10 +38,10 @@ class RelatorioService:
 
     @staticmethod
     def _calcular_desconto(faturamento):
-        if faturamento > 10000:
-            return faturamento * 0.1
-        if faturamento > 5000:
-            return faturamento * 0.05
-        if faturamento > 1000:
-            return faturamento * 0.02
+        if faturamento > FATURAMENTO_MINIMO_DESCONTO_ALTO:
+            return faturamento * DESCONTO_ALTO
+        if faturamento > FATURAMENTO_MINIMO_DESCONTO_MEDIO:
+            return faturamento * DESCONTO_MEDIO
+        if faturamento > FATURAMENTO_MINIMO_DESCONTO_BAIXO:
+            return faturamento * DESCONTO_BAIXO
         return 0

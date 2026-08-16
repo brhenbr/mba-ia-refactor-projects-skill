@@ -1,13 +1,12 @@
 import logging
 import os
-from datetime import datetime
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
 from config import config_by_name
-from database import db
+from database import db, utc_now
 from middleware.error_handler import register_error_handlers
 from routes.category_routes import category_bp
 from routes.report_routes import report_bp
@@ -40,7 +39,7 @@ def create_app(env=None):
 
     @app.route('/health')
     def health():
-        return jsonify({'status': 'ok', 'timestamp': str(datetime.utcnow())})
+        return jsonify({'status': 'ok', 'timestamp': str(utc_now())})
 
     @app.route('/')
     def index():

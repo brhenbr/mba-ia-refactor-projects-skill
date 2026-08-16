@@ -168,7 +168,7 @@ Cada projeto contém uma cópia idêntica destes 6 arquivos em `.claude/skills/r
 | Arquivo | Papel |
 |---|---|
 | **`SKILL.md`** | Ponto de entrada da skill. Descreve o overview, propósito, escopo, o fluxo das 3 fases, a tabela de severidades e os princípios guia (Security First, Separation of Concerns, DRY, SOLID, Performance, Testability). É o "prompt" que orquestra o uso dos demais arquivos. |
-| **`antipatterns.md`** | Catálogo com 10+ anti-patterns (SQL Injection, credenciais hardcoded, senhas em texto plano/MD5, ausência de autenticação, N+1 queries, callback hell, código duplicado, APIs deprecated, etc.), cada um com sinais de detecção, severidade, impacto e categoria — a base de conhecimento usada na Fase 2. |
+| **`antipatterns.md`** | Catálogo com 12 anti-patterns cobrindo as 4 severidades (CRITICAL: SQL Injection, credenciais hardcoded, autenticação ausente, criptografia fraca; HIGH: N+1 queries, callback hell; MEDIUM: código duplicado, variáveis globais, exception handling genérico, validação inconsistente, **APIs/métodos deprecated**; LOW: **magic numbers e nomenclatura pouco descritiva**), cada um com sinais de detecção, severidade, impacto e categoria — a base de conhecimento usada na Fase 2. |
 | **`architecture-rules.md`** | Diretrizes da arquitetura-alvo: camadas MVC (routes/views → controllers → services → models/repositories → db), responsabilidade de cada camada e regras de organização de diretórios — a referência usada na Fase 3. |
 | **`refactoring-playbook.md`** | Playbooks passo-a-passo de transformação (mínimo 8), cada um com exemplo de código "antes" e "depois" para resolver um anti-pattern específico do catálogo — aplicado durante a Fase 3. |
 | **`heuristics.md`** | Checklist de heurísticas de qualidade (segurança, autenticação, performance, manutenibilidade) usado para validar o resultado da refatoração ao final da Fase 3. |
@@ -207,3 +207,21 @@ Os relatórios de auditoria gerados pela Fase 2 da skill (após a Fase 3 conclu�
 | [`reports/audit-project-3.md`](reports/audit-project-3.md) | `task-manager-api` (Flask, parcialmente organizado) | Findings equivalentes de segurança e qualidade mesmo com separação superficial em `models/routes/services/utils` pré-existente. Score geral 30% → 91%, com 61 testes automatizados. |
 
 Cada relatório segue o formato de `report-template.md`: Executive Summary com score de saúde do projeto, tabela de findings por severidade com arquivo/linhas exatos, seção "o que foi feito" (mapeando cada finding à correção aplicada), decisões e observações, pendências fora do escopo e resultado da suíte de testes.
+
+---
+
+## 4. Correções aplicadas após revisão
+
+A primeira submissão recebeu o seguinte retorno:
+
+> "O SKILL.md copiado nos três projetos não descreve as 3 fases do fluxo (não fala em pausar para confirmação antes da Fase 3 nem em validar boot e endpoints ao final dela), e o antipatterns.md não tem nenhum anti-pattern de severidade LOW nem cobre detecção de APIs deprecated."
+
+Ações tomadas em resposta, replicadas identicamente nos 3 projetos:
+
+1. **`SKILL.md` reescrito** com as 3 fases explícitas (`FASE 1 — Análise` → `FASE 2 — Auditoria` com o gate obrigatório `Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]` → `FASE 3 — Refatoração + Validação`), incluindo uma checklist de validação obrigatória (boot sem erros, endpoints originais respondendo, suíte de testes passando, heurísticas revisadas) antes de declarar a Fase 3 concluída.
+2. **`antipatterns.md` ampliado** de 10 para 12 anti-patterns: `#11 Uso de APIs e Métodos Deprecated` (MEDIUM) e `#12 Magic Numbers e Nomenclatura Pouco Descritiva` (LOW) — cada um com exemplos Python/Node.js e correção. `refactoring-playbook.md` ganhou os playbooks #11 e #12 correspondentes.
+3. **A skill foi executada novamente (Fases 1-3) nos 3 projetos** com o catálogo atualizado:
+   - `code-smells-project`: 1 novo finding LOW (magic numbers em `relatorio_service.py`) corrigido.
+   - `ecommerce-api-legacy`: 0 novos findings — código já não usava APIs deprecated nem tinha magic numbers relevantes.
+   - `task-manager-api`: 16 ocorrências de `datetime.utcnow()` (deprecated desde Python 3.12) + variáveis abreviadas (`t`, `u`, `n`) encontradas e corrigidas. A correção do datetime expôs um bug real (comparação entre datetime aware e naive, `TypeError`) que foi corrigido junto — ver `reports/audit-project-3.md` para o detalhe.
+   - Os 3 relatórios em `reports/` foram atualizados com uma seção "Re-auditoria" documentando essa segunda execução (findings, confirmação, correção e validação de boot/testes/endpoints).

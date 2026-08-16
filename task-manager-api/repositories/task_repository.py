@@ -1,9 +1,7 @@
-from datetime import datetime
-
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from database import db
+from database import db, utc_now
 from models.task import Task
 
 ACTIVE_STATUSES_EXCLUDED_FROM_OVERDUE = ["done", "cancelled"]
@@ -53,7 +51,7 @@ class TaskRepository:
     def update(self, task, data):
         for key, value in data.items():
             setattr(task, key, value)
-        task.updated_at = datetime.utcnow()
+        task.updated_at = utc_now()
         db.session.commit()
         return task
 
@@ -82,7 +80,7 @@ class TaskRepository:
     def _overdue_filter(self, query):
         return query.filter(
             Task.due_date.isnot(None),
-            Task.due_date < datetime.utcnow(),
+            Task.due_date < utc_now(),
             Task.status.notin_(ACTIVE_STATUSES_EXCLUDED_FROM_OVERDUE),
         )
 

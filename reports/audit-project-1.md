@@ -117,3 +117,37 @@ pytest tests/ -q
 ```
 
 **Pronto para Merge:** SIM
+
+---
+
+## 🔁 Re-auditoria — 2026-08-16 (catálogo atualizado: LOW + APIs Deprecated)
+
+O `antipatterns.md` da skill foi ampliado com dois anti-patterns que faltavam no catálogo original: **#11 APIs/Métodos Deprecated** (MEDIUM) e **#12 Magic Numbers e Nomenclatura Pouco Descritiva** (LOW). O `SKILL.md` também foi reescrito para descrever explicitamente as 3 fases (Análise → Auditoria + pausa de confirmação → Refatoração + validação). A skill foi executada novamente (Fase 1 → Fase 2) sobre o código já refatorado deste projeto:
+
+### Fase 1 — Análise
+```
+Language:      Python
+Framework:     Flask 3.1.1
+Architecture:  Em camadas (routes/validators/services/repositories/models/middleware)
+Source files:  ~30 files analyzed
+DB tables:     produtos, usuarios, pedidos, itens_pedido
+```
+
+### Fase 2 — Findings novos
+
+| # | Problema | Severidade | Arquivo |
+|---|---|---|---|
+| 1 | Magic numbers na regra de desconto por faturamento (`10000`, `5000`, `1000`, `0.1`, `0.05`, `0.02` sem constante nomeada) | 🔵 LOW | `services/relatorio_service.py:34-39` |
+
+Nenhum uso de API deprecated foi encontrado neste projeto (`datetime.now(timezone.utc)` já era usado desde a refatoração original; dependências no `requirements.txt` estão em versões atuais) — o catálogo agora cobre essa checagem, e o resultado aqui é "nenhum achado", não "não verificado".
+
+**Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n] → y** (confirmado pelo responsável do projeto)
+
+### Fase 3 — Correção e validação
+- `_calcular_desconto` em `services/relatorio_service.py` passou a usar constantes nomeadas (`FATURAMENTO_MINIMO_DESCONTO_ALTO`, `DESCONTO_ALTO`, etc.) no lugar dos magic numbers.
+- **Validação:**
+  - ✅ `pytest -q` → 28 passed (sem `DeprecationWarning`/`FutureWarning` no output)
+  - ✅ Boot: `python app.py` sobe sem erros
+  - ✅ Endpoints originais respondendo: `GET /health` → 200, `GET /produtos` → 200
+
+**Score atualizado:** sem mudança material (26%→90% já refletia o estado pós-refatoração; o ajuste de nomenclatura não altera segurança/performance).

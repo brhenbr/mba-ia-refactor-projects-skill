@@ -1102,6 +1102,141 @@ def update_task(current_user_id, task_id):
 
 ---
 
+## Playbook #11: Substituir APIs Deprecated
+
+### Problema
+Código chama funções/métodos que a linguagem, framework ou biblioteca já marcaram como deprecated — funciona hoje, mas gera warnings e quebra em upgrades futuros.
+
+### Impacto
+- 🟡 MEDIUM: dívida técnica silenciosa; upgrade de dependência pode quebrar produção sem aviso
+
+### Exemplo Antes
+
+```python
+# ❌ Python — deprecated desde 3.12
+from datetime import datetime
+
+class Task(db.Model):
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def is_overdue(self):
+        return self.due_date < datetime.utcnow()
+```
+
+```javascript
+// ❌ Node.js — Buffer() deprecated desde Node 6
+function encode(payload) {
+    return new Buffer(payload).toString('base64');
+}
+```
+
+### Exemplo Depois
+
+**Step 1: Buscar todas as ocorrências**
+
+```bash
+grep -rn "datetime.utcnow\|new Buffer(" --include="*.py" --include="*.js"
+```
+
+**Step 2: Substituir pela API atual, mantendo o comportamento**
+
+```python
+# ✅ Python — timezone-aware, API atual
+from datetime import datetime, timezone
+
+def _now():
+    return datetime.now(timezone.utc)
+
+class Task(db.Model):
+    created_at = db.Column(db.DateTime, default=_now)
+
+    def is_overdue(self):
+        return self.due_date < _now()
+```
+
+```javascript
+// ✅ Node.js — API atual
+function encode(payload) {
+    return Buffer.from(payload).toString('base64');
+}
+```
+
+**Step 3: Validar**
+
+```bash
+# Rodar a app/testes e confirmar que não há mais DeprecationWarning no output
+pytest -q  # ou: npm test
+```
+
+### Checklist
+- [ ] Grep pelas APIs deprecated conhecidas da stack detectada na Fase 1
+- [ ] Substituir cada ocorrência pela API atual equivalente (mesmo comportamento observável)
+- [ ] Rodar a aplicação e a suíte de testes e confirmar ausência de `DeprecationWarning`/`FutureWarning`
+- [ ] Conferir o changelog da versão instalada de cada dependência principal
+
+---
+
+## Playbook #12: Eliminar Magic Numbers e Renomear Variáveis
+
+### Problema
+Valores soltos sem nome (`0.85`, `16`, `3600000`) e variáveis abreviadas (`u`, `t`, `cc`) tornam o código difícil de ler e de alterar com segurança.
+
+### Impacto
+- 🔵 LOW: legibilidade e velocidade de manutenção, sem risco funcional imediato
+
+### Exemplo Antes
+
+```python
+# ❌ Magic numbers e nomes abreviados
+def calcular_desconto(p, qtd):
+    if qtd > 10:
+        return p * 0.85
+    return p
+```
+
+```javascript
+// ❌ Magic numbers e nomes abreviados
+function processarPagamento(cc, e, u) {
+    if (cc.length !== 16) { throw new Error('Cartão inválido'); }
+}
+```
+
+### Exemplo Depois
+
+**Step 1: Extrair constantes nomeadas**
+
+```python
+# ✅ Python
+DESCONTO_ATACADO = 0.85
+QUANTIDADE_MINIMA_ATACADO = 10
+
+def calcular_desconto(preco, quantidade):
+    if quantidade > QUANTIDADE_MINIMA_ATACADO:
+        return preco * DESCONTO_ATACADO
+    return preco
+```
+
+```javascript
+// ✅ Node.js
+const CREDIT_CARD_LENGTH = 16;
+
+function processarPagamento(creditCard, email, user) {
+    if (creditCard.length !== CREDIT_CARD_LENGTH) {
+        throw new Error('Cartão inválido');
+    }
+}
+```
+
+**Step 2: Renomear parâmetros/variáveis abreviados em todo o arquivo** (buscar por variáveis de 1-2 letras fora de laços curtos e renomear para o nome completo do domínio).
+
+### Checklist
+- [ ] Grep por literais numéricos repetidos ou não-óbvios fora de testes
+- [ ] Extrair para constantes com nome que explique o "porquê"
+- [ ] Renomear variáveis/parâmetros de 1-2 letras (exceto índices de loop locais)
+- [ ] Rodar a suíte de testes para garantir que o comportamento não mudou
+
+---
+
 ## Resumo de Playbooks
 
 | Playbook | Severidade | Tempo Estimado |
@@ -1116,8 +1251,10 @@ def update_task(current_user_id, task_id):
 | #8 Global Variables | MEDIUM | 1-2 horas |
 | #9 Exception Handling | MEDIUM | 2-3 horas |
 | #10 Validação | MEDIUM | 2-3 horas |
+| #11 APIs Deprecated | MEDIUM | 1-2 horas |
+| #12 Magic Numbers / Nomenclatura | LOW | 1-2 horas |
 
-**Total:** ~25-35 horas de refatoração (depende do projeto)
+**Total:** ~27-39 horas de refatoração (depende do projeto)
 
 ---
 

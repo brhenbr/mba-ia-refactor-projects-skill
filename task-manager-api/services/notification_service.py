@@ -1,7 +1,8 @@
 import logging
 import os
 import smtplib
-from datetime import datetime
+
+from database import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class NotificationService:
             'type': 'task_assigned',
             'user_id': user.id,
             'task_id': task.id,
-            'timestamp': datetime.utcnow()
+            'timestamp': utc_now()
         })
 
     def notify_task_overdue(self, user, task):
@@ -50,7 +51,7 @@ class NotificationService:
 
     def get_notifications(self, user_id):
         result = []
-        for n in self.notifications:
-            if n['user_id'] == user_id:
-                result.append(n)
+        for notification in self.notifications:
+            if notification['user_id'] == user_id:
+                result.append(notification)
         return result

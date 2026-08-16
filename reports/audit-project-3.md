@@ -119,3 +119,39 @@ pytest -q
 ```
 
 **Pronto para Merge:** SIM
+
+---
+
+## 🔁 Re-auditoria — 2026-08-16 (catálogo atualizado: LOW + APIs Deprecated)
+
+O `antipatterns.md` da skill foi ampliado com **#11 APIs/Métodos Deprecated** (MEDIUM) e **#12 Magic Numbers e Nomenclatura Pouco Descritiva** (LOW), e o `SKILL.md` foi reescrito para descrever explicitamente as 3 fases com pausa de confirmação e validação de boot/endpoints. A skill foi executada novamente sobre o código já refatorado deste projeto — e, diferente dos outros dois, encontrou achados reais.
+
+### Fase 1 — Análise
+```
+Language:      Python
+Framework:     Flask 3.1.1
+Architecture:  Em camadas (models/routes/services/repositories/validators/middleware)
+Source files:  ~25 files analyzed
+DB tables:     users, tasks, categories
+```
+
+### Fase 2 — Findings novos
+
+| # | Problema | Severidade | Arquivo(s) |
+|---|---|---|---|
+| 1 | `datetime.utcnow()` (deprecated desde Python 3.12) — 16 ocorrências | 🟡 MEDIUM | `app.py:43`, `models/task.py`, `models/user.py`, `models/category.py`, `repositories/task_repository.py:56,85`, `services/report_service.py:30,35,38`, `services/notification_service.py:43`, `seed.py` (5x), `tests/test_tasks.py` (2x) |
+| 2 | Variáveis de loop abreviadas (`t`, `u`, `n`) | 🔵 LOW | `services/report_service.py` (`for t in tasks`, `for u in ...find_all()`), `services/notification_service.py` (`for n in self.notifications`) |
+
+**Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n] → y**
+
+### Fase 3 — Correção e validação
+
+- Criado `utc_now()` centralizado em `database.py` (importado por models/repositories/services/seed) substituindo todas as chamadas a `datetime.utcnow()`.
+- Variáveis renomeadas: `t` → `task`, `u`/`n` → `user`/`notification` nos arquivos citados.
+- **Achado durante a correção, não previsto no plano inicial:** a substituição ingênua por `datetime.now(timezone.utc)` (aware) quebrou a comparação com `due_date`/`created_at`, que são `db.DateTime` **naive** no SQLite — `TypeError: can't compare offset-naive and offset-aware datetimes`, capturado por `tests/test_tasks.py::test_is_overdue_*` na primeira rodada de testes pós-fix. Corrigido fazendo `utc_now()` retornar `datetime.now(timezone.utc).replace(tzinfo=None)` — elimina a API deprecated mantendo a convenção naive-UTC já usada pelo schema, sem exigir migração de coluna.
+- **Validação:**
+  - ✅ `pytest -q` → 61 passed (sem `DeprecationWarning`/`FutureWarning` no output; antes da correção do bug aware/naive, 2 testes falhavam)
+  - ✅ Boot: `python app.py` sobe sem erros
+  - ✅ Endpoints originais respondendo: `GET /health` → 200, `GET /tasks` sem token → 401 (comportamento de autenticação preservado)
+
+**Nota:** este achado é o motivo pelo qual a Fase 3 da skill exige validação real (rodar a suíte/boot), não apenas assumir que a transformação do playbook é segura — a troca de `datetime.utcnow()` por `datetime.now(timezone.utc)` é a recomendação padrão da comunidade Python, mas só é segura de aplicar cegamente quando combinada com uma checagem de que o restante do sistema já lida com datetimes aware.

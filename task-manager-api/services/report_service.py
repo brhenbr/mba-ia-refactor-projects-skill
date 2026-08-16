@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+from database import utc_now
 from exceptions import NotFoundException
 from repositories.category_repository import CategoryRepository
 from repositories.task_repository import TaskRepository
@@ -24,18 +25,18 @@ class ReportService:
         overdue_tasks = self.task_repo.find_overdue()
         overdue_list = [
             {
-                "id": t.id,
-                "title": t.title,
-                "due_date": str(t.due_date),
-                "days_overdue": (datetime.utcnow() - t.due_date).days,
+                "id": task.id,
+                "title": task.title,
+                "due_date": str(task.due_date),
+                "days_overdue": (utc_now() - task.due_date).days,
             }
-            for t in overdue_tasks
+            for task in overdue_tasks
         ]
 
-        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        seven_days_ago = utc_now() - timedelta(days=7)
 
         return {
-            "generated_at": str(datetime.utcnow()),
+            "generated_at": str(utc_now()),
             "overview": {
                 "total_tasks": self.task_repo.count_total(),
                 "total_users": len(self.user_repo.find_all()),
@@ -54,7 +55,7 @@ class ReportService:
     def _user_productivity(self):
         """Built from a single grouped query (counts_by_user_and_status) instead of
         running one Task query per user, which was the original N+1."""
-        users = {u.id: u.name for u in self.user_repo.find_all()}
+        users = {user.id: user.name for user in self.user_repo.find_all()}
         totals = {uid: 0 for uid in users}
         completed = {uid: 0 for uid in users}
 
@@ -86,11 +87,11 @@ class ReportService:
         high_priority = 0
         overdue = 0
 
-        for t in tasks:
-            by_status[t.status] = by_status.get(t.status, 0) + 1
-            if t.priority <= 2:
+        for task in tasks:
+            by_status[task.status] = by_status.get(task.status, 0) + 1
+            if task.priority <= 2:
                 high_priority += 1
-            if t.is_overdue():
+            if task.is_overdue():
                 overdue += 1
 
         total = len(tasks)

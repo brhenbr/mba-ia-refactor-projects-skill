@@ -294,3 +294,32 @@ Testes:      21 testes de integração (Jest + Supertest), cobrindo auth,
 
 **Relatório Finalizado:** SIM
 **Pronto para Merge:** SIM
+
+---
+
+## 🔁 Re-auditoria — 2026-08-16 (catálogo atualizado: LOW + APIs Deprecated)
+
+O `antipatterns.md` da skill foi ampliado com **#11 APIs/Métodos Deprecated** (MEDIUM) e **#12 Magic Numbers e Nomenclatura Pouco Descritiva** (LOW), e o `SKILL.md` foi reescrito para descrever explicitamente as 3 fases com pausa de confirmação e validação. A skill foi executada novamente sobre o código já refatorado deste projeto:
+
+### Fase 1 — Análise
+```
+Language:      JavaScript (Node.js)
+Framework:     Express 4.18.2
+Architecture:  Em camadas (routes/validators/services/repositories/middleware/config)
+Source files:  24 files analyzed
+DB tables:     users, courses, enrollments, payments, audit_log
+```
+
+### Fase 2 — Findings novos
+Nenhum finding novo. Checagem específica dos dois anti-patterns adicionados:
+- **APIs Deprecated:** nenhuma ocorrência de `new Buffer()`, `url.parse()`, `createCipher()` ou libs deprecated — `package.json` já usa versões atuais (`express@4.18.2`, `bcrypt@5.1.1`, `jsonwebtoken@9.0.2`).
+- **Magic Numbers/Nomenclatura:** parâmetros e variáveis já usam nomes completos (`cardNumber`, `courseId`, `enrollmentId`); os únicos literais numéricos são preço de seed (`db/schema.js`) e códigos de status HTTP, que não se qualificam como magic numbers.
+
+**Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n] → y** — nada para corrigir; a fase existe apenas para confirmar a ausência de findings.
+
+### Fase 3 — Validação
+- ✅ `npm test` → 21 passed (4 suites)
+- ✅ Boot: `node src/server.js` sobe sem erros
+- ✅ `GET /health` → 200
+
+**Score atualizado:** mantido — o projeto já não apresentava findings nas duas categorias novas do catálogo.
