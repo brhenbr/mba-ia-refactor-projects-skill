@@ -323,3 +323,44 @@ Nenhum finding novo. Checagem específica dos dois anti-patterns adicionados:
 - ✅ `GET /health` → 200
 
 **Score atualizado:** mantido — o projeto já não apresentava findings nas duas categorias novas do catálogo.
+
+---
+
+## 🔁 Re-auditoria #2 — 2026-08-18 (reforço da camada de Models)
+
+`architecture-rules.md` foi reforçado para deixar explícito que a camada `models/` é **obrigatória mesmo sem ORM** — quando o repository usa um driver SQL cru, ele deve montar um objeto de domínio (`Model.fromRow(row)`) a partir da linha antes de devolvê-la ao service, nunca a linha crua. `heuristics.md` ganhou uma checagem/red-flag específica para isso e `SKILL.md` (Fase 3) passou a exigir esse grep antes de declarar a fase concluída. A skill foi executada de novo sobre este projeto.
+
+### Fase 2 — Finding novo
+
+| # | Problema | Severidade | Arquivo(s) |
+|---|---|---|---|
+| 1 | Camada de Models ausente — `courseRepository.js`, `userRepository.js`, `enrollmentRepository.js`, `paymentRepository.js` devolviam `row`/`{lastID}` crus direto para os services (`this.db.get(...)`/`this.db.all(...)` sem nenhuma transformação), violando `architecture-rules.md` § Models Layer | 🟠 HIGH | `src/repositories/courseRepository.js:6-12`, `src/repositories/userRepository.js:6-19`, `src/repositories/enrollmentRepository.js:6-12`, `src/repositories/paymentRepository.js:6-12` |
+
+Classificado HIGH (não CRITICAL) por ser uma violação de separação de camadas que compromete manutenibilidade e testabilidade, mas não expõe dado sensível nem quebra funcionamento — consistente com a definição de severidade do enunciado ("fortes violações do padrão MVC... que dificultam muito a manutenção e testes").
+
+**Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n] → y**
+
+### Fase 3 — Correção e validação
+
+- Criado `src/models/` com 4 classes de domínio: `User` (+ `isAdmin()`, `verifyPassword()`, `toPublicJSON()`), `Course`, `Enrollment`, `Payment` (+ `isPaid()`) — cada uma com um `fromRow(row)` estático.
+- `courseRepository.js` e `userRepository.js` passaram a montar `Course.fromRow(row)` / `User.fromRow(row)` antes de retornar.
+- `enrollmentRepository.js` e `paymentRepository.js` passaram a retornar `new Enrollment(...)` / `new Payment(...)` (com `.id`) em vez do `lastID` cru.
+- `checkoutService.js` atualizado para usar `enrollment.id` (era `enrollmentId` cru); `authService.js` passou a chamar `user.verifyPassword(password)` e `user.toPublicJSON()` em vez de acessar `user.pass_hash` diretamente e montar o objeto de resposta à mão — a lógica de domínio (verificar senha, decidir o que é seguro serializar) agora mora no model, não no service.
+- **Validação:**
+  - ✅ `npm test` → 21 passed (4 suites) — nenhuma regressão de contrato (login, checkout, financial report, cascade delete)
+  - ✅ Boot: `node src/server.js` sobe sem erros
+  - ✅ `GET /health` → 200; `POST /api/auth/login` → 200 com `user` sem `pass_hash`; `POST /api/checkout` → 200 com `enrollmentId` numérico (fluxo completo Course→Enrollment→Payment validado via curl, ponta a ponta)
+
+**Nova estrutura de `src/`:**
+```
+src/
+├── models/          # NOVO — User, Course, Enrollment, Payment
+├── repositories/    # agora devolvem entidades, não rows
+├── services/
+├── validators/
+├── middleware/
+├── routes/
+├── config/
+├── db/
+└── utils/
+```

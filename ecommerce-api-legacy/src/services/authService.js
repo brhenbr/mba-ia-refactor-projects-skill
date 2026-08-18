@@ -1,4 +1,3 @@
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 const { UnauthorizedError } = require('../exceptions');
@@ -14,7 +13,7 @@ class AuthService {
             throw new UnauthorizedError('Credenciais inválidas');
         }
 
-        const matches = await bcrypt.compare(password, user.pass_hash);
+        const matches = await user.verifyPassword(password);
         if (!matches) {
             throw new UnauthorizedError('Credenciais inválidas');
         }
@@ -23,10 +22,7 @@ class AuthService {
             expiresIn: config.jwtExpiresIn,
         });
 
-        return {
-            token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role },
-        };
+        return { token, user: user.toPublicJSON() };
     }
 }
 

@@ -65,6 +65,7 @@ Heurísticas para validar que refatorações seguem boas práticas e código est
 - [ ] Models contêm apenas dados + validações de domínio
 - [ ] Services contêm lógica de negócio
 - [ ] Repositories abstraem acesso a dados
+- [ ] Existe `models/` com uma classe por entidade principal — **mesmo em stacks sem ORM** (driver SQL cru). Repository não devolve `row`/`rows` cru para o service: todo método de leitura passa o resultado do banco por `Model.fromRow(...)` antes de retornar (grep por `return this.db.get(`/`return this.db.all(`/`return cursor.fetchone()` sem transformação no meio é sinal de que falta essa camada)
 
 ### ✅ DRY (Don't Repeat Yourself)
 - [ ] Nenhuma lógica duplicada (máximo 1 cópia)
@@ -295,6 +296,7 @@ DEPLOYMENT
 10. ❌ Código duplicado (mesma lógica 3+ vezes)
 11. ❌ Nenhum teste (cobertura 0%)
 12. ❌ Global variable mutable (cache global, contador global)
+13. ❌ Repository devolve `row`/`rows` cru do banco para o service, sem passar por um model (`fromRow`) — inclusive em stacks sem ORM
 
 Se encontrou qualquer uma, volte e corrija antes de continuar.
 

@@ -278,19 +278,21 @@ class TaskRepository:
 **Localização:** `models/`  
 **Responsabilidade:** Estrutura de dados, validações de domínio
 
+**Esta camada é obrigatória mesmo sem ORM.** Ela não depende de o projeto usar um ORM (SQLAlchemy, Sequelize, TypeORM) — é sobre existir uma classe de domínio entre o banco e o resto da aplicação. Se o repository usa um driver cru (`sqlite3`, `pg`, `mysql2`) e faz `SELECT *`, a linha crua (`row`) **não pode** ser devolvida direto para o service: o repository deve montar um objeto de domínio (`Model.fromRow(row)`) a partir dela antes de retornar. Sinal de que esta camada está faltando: um repository cujo método de leitura termina em `return this.db.get(...)` / `return this.db.all(...)` sem nenhuma transformação no meio — a assinatura do método promete uma entidade, mas entrega uma linha de banco.
+
 **O que FAZER:**
-- ✅ Definir schema do banco (fields, tipos, constraints)
+- ✅ Definir schema do banco (fields, tipos, constraints) — via ORM ou via classe simples (`fromRow`) quando não há ORM
 - ✅ Validações de domínio (métodos de negócio)
 - ✅ Relacionamentos (foreign keys, backrefs)
-- ✅ Serialização (to_dict, to_json)
-- ✅ Métodos de utilidade (is_overdue, is_valid, etc)
+- ✅ Serialização (to_dict/to_json, ou toPublicJSON em JS)
+- ✅ Métodos de utilidade (is_overdue, is_valid, isAdmin, etc)
 
 **O que NÃO fazer:**
 - ❌ SQL queries direto
 - ❌ Chamar APIs externas
 - ❌ Lógica complexa (ir para service)
 
-**Exemplo CORRETO:**
+**Exemplo CORRETO (com ORM):**
 
 ```python
 # ✅ models/task.py
@@ -339,6 +341,72 @@ class Task(db.Model):
     def can_be_deleted(self):
         """Regra de negócio: pode deletar?"""
         return self.status in ['pending', 'cancelled']
+```
+
+**Exemplo CORRETO (sem ORM — driver SQL cru, ex.: Node.js + `sqlite3`/`pg`):**
+
+Quando não há ORM, o model é uma classe simples com um construtor + um `fromRow` estático que o repository chama para transformar a linha crua do banco em um objeto de domínio, antes de devolvê-lo ao service.
+
+```javascript
+// ✅ models/User.js — classe de domínio, sem ORM
+const bcrypt = require('bcrypt');
+
+class User {
+    constructor({ id, name, email, pass_hash: passHash, role }) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.passHash = passHash;
+        this.role = role;
+    }
+
+    // Constrói a entidade a partir de uma linha crua do banco
+    static fromRow(row) {
+        return row ? new User(row) : null;
+    }
+
+    isAdmin() {
+        return this.role === 'admin';
+    }
+
+    verifyPassword(password) {
+        return bcrypt.compare(password, this.passHash);
+    }
+
+    // Serialização: nunca inclui passHash
+    toPublicJSON() {
+        return { id: this.id, name: this.name, email: this.email, role: this.role };
+    }
+}
+
+module.exports = { User };
+```
+
+```javascript
+// ✅ repositories/userRepository.js — devolve a entidade, não a linha crua
+const { User } = require('../models/User');
+
+class UserRepository {
+    constructor(db) {
+        this.db = db;
+    }
+
+    async findByEmail(email) {
+        const row = await this.db.get('SELECT * FROM users WHERE email = ?', [email]);
+        return User.fromRow(row);   // ✅ entidade de domínio
+    }
+}
+```
+
+```javascript
+// ❌ INCORRETO — repository devolve a linha crua do banco direto para o service
+class UserRepository {
+    findByEmail(email) {
+        return this.db.get('SELECT * FROM users WHERE email = ?', [email]); // ❌ raw row
+    }
+}
+// service agora depende de nomes de coluna do banco (pass_hash) e não tem
+// nenhum método de domínio disponível (isAdmin, verifyPassword, etc)
 ```
 
 ---
@@ -433,7 +501,7 @@ def delete_task(current_user_id, task_id):
 
 ## Project Structure
 
-Organização recomendada:
+Organização recomendada (nomes de arquivo/extensão variam por stack — `.py`/`.js`/etc — mas a lista de camadas, incluindo `models/`, é a mesma independentemente de a stack ter ORM ou usar um driver SQL cru):
 
 ```
 projeto/

@@ -1,3 +1,5 @@
+const { Payment } = require('../models/Payment');
+
 class PaymentRepository {
     constructor(db) {
         this.db = db;
@@ -8,7 +10,7 @@ class PaymentRepository {
             'INSERT INTO payments (enrollment_id, amount, status) VALUES (?, ?, ?)',
             [enrollmentId, amount, status]
         );
-        return lastID;
+        return new Payment({ id: lastID, enrollment_id: enrollmentId, amount, status });
     }
 }
 

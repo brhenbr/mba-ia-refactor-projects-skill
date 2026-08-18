@@ -111,7 +111,7 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
 
 Objetivo: eliminar os problemas encontrados e provar que a aplicação continua funcionando.
 
-1. Reestruturar o projeto para o padrão de camadas descrito em `architecture-rules.md` (Models / Views-Routes / Controllers-Services, config isolada, error handling centralizado, entry point único).
+1. Reestruturar o projeto para o padrão de camadas descrito em `architecture-rules.md` (Models / Views-Routes / Controllers-Services, config isolada, error handling centralizado, entry point único). **A camada de Models é obrigatória independentemente de a stack ter ORM.** Em stacks com driver SQL cru (ex.: Node.js + `sqlite3`/`pg` sem Sequelize/TypeORM), criar `models/` com uma classe por entidade e um `fromRow(row)` estático — nenhum repository pode devolver a linha crua do banco (`row`/`rows`) direto para o service. Antes de declarar a Fase 3 concluída, grepar os repositories por `return this.db.get(`/`return this.db.all(`/equivalente sem transformação no meio — se aparecer, a camada de Models está incompleta.
 2. Para cada finding do relatório da Fase 2, aplicar a transformação correspondente de `refactoring-playbook.md` (ex.: SQL Injection → ORM/prepared statements; credenciais hardcoded → variáveis de ambiente; senha em texto plano/MD5 → bcrypt; N+1 → eager loading; API deprecated → substituir pela API atual equivalente).
 3. Rodar a suíte de testes automatizados existente, se houver (`pytest`, `npm test`, etc.), e corrigir regressões.
 4. **Validação obrigatória — a Fase 3 só é considerada concluída se todos os itens abaixo forem checados de fato (não apenas assumidos):**

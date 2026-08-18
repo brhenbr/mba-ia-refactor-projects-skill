@@ -151,3 +151,9 @@ Nenhum uso de API deprecated foi encontrado neste projeto (`datetime.now(timezon
   - ✅ Endpoints originais respondendo: `GET /health` → 200, `GET /produtos` → 200
 
 **Score atualizado:** sem mudança material (26%→90% já refletia o estado pós-refatoração; o ajuste de nomenclatura não altera segurança/performance).
+
+---
+
+## 🔁 Re-auditoria #2 — 2026-08-18 (reforço da camada de Models)
+
+`architecture-rules.md`/`heuristics.md`/`SKILL.md` foram reforçados para deixar explícito que a camada `models/` é obrigatória mesmo sem ORM (achado no `ecommerce-api-legacy` — ver `reports/audit-project-2.md`). Checagem específica repetida aqui: `repositories/` usa exclusivamente SQLAlchemy ORM (`Produto.query`, `db.session.query(...)`), que já devolve instâncias de `models/` mapeadas — nenhum `cursor.execute`/`cursor.fetchone` cru encontrado em `repositories/`. **Nenhum finding novo.**

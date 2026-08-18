@@ -1,14 +1,18 @@
+const { User } = require('../models/User');
+
 class UserRepository {
     constructor(db) {
         this.db = db;
     }
 
-    findByEmail(email) {
-        return this.db.get('SELECT * FROM users WHERE email = ?', [email]);
+    async findByEmail(email) {
+        const row = await this.db.get('SELECT * FROM users WHERE email = ?', [email]);
+        return User.fromRow(row);
     }
 
-    findById(id) {
-        return this.db.get('SELECT * FROM users WHERE id = ?', [id]);
+    async findById(id) {
+        const row = await this.db.get('SELECT * FROM users WHERE id = ?', [id]);
+        return User.fromRow(row);
     }
 
     async create({ name, email, passHash, role = 'user' }) {

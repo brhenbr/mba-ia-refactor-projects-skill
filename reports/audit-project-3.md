@@ -155,3 +155,9 @@ DB tables:     users, tasks, categories
   - ✅ Endpoints originais respondendo: `GET /health` → 200, `GET /tasks` sem token → 401 (comportamento de autenticação preservado)
 
 **Nota:** este achado é o motivo pelo qual a Fase 3 da skill exige validação real (rodar a suíte/boot), não apenas assumir que a transformação do playbook é segura — a troca de `datetime.utcnow()` por `datetime.now(timezone.utc)` é a recomendação padrão da comunidade Python, mas só é segura de aplicar cegamente quando combinada com uma checagem de que o restante do sistema já lida com datetimes aware.
+
+---
+
+## 🔁 Re-auditoria #3 — 2026-08-18 (reforço da camada de Models)
+
+`architecture-rules.md`/`heuristics.md`/`SKILL.md` foram reforçados para deixar explícito que a camada `models/` é obrigatória mesmo sem ORM (achado no `ecommerce-api-legacy` — ver `reports/audit-project-2.md`). Checagem específica repetida aqui: `repositories/` usa exclusivamente SQLAlchemy ORM (`Task.query`, `db.session.query(...)`), que já devolve instâncias de `models/task.py`/`models/user.py`/`models/category.py` mapeadas — nenhum `cursor.execute`/`cursor.fetchone` cru encontrado em `repositories/`. **Nenhum finding novo.**

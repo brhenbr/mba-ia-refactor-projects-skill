@@ -48,13 +48,13 @@ class CheckoutService {
             throw new PaymentDeclinedError('Pagamento recusado');
         }
 
-        const enrollmentId = await this.enrollmentRepository.create(user.id, course.id);
-        await this.paymentRepository.create(enrollmentId, course.price, status);
+        const enrollment = await this.enrollmentRepository.create(user.id, course.id);
+        await this.paymentRepository.create(enrollment.id, course.price, status);
         await this.auditLogRepository.create(`Checkout curso ${course.id} por ${user.id}`);
 
         this.cache.set(`last_checkout_${user.id}`, course.title);
 
-        return { message: 'Sucesso', enrollmentId };
+        return { message: 'Sucesso', enrollmentId: enrollment.id };
     }
 }
 
