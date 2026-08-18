@@ -2,7 +2,7 @@
 
 LMS API (com fluxo de checkout) em Node.js/Express. Refatorada para uma arquitetura em
 camadas (`routes -> validators -> services -> repositories -> models`); veja
-`AUDIT_REPORT.md` para o antes/depois completo.
+[`../reports/audit-project-2.md`](../reports/audit-project-2.md) para o antes/depois completo.
 
 ## Como rodar
 

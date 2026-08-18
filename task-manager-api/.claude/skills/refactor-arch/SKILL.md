@@ -1,3 +1,8 @@
+---
+name: refactor-arch
+description: Analisa, audita e refatora um projeto backend (qualquer linguagem/framework) para o padrão MVC em 3 fases — Análise, Auditoria (com pausa de confirmação), Refatoração + Validação. Use quando o usuário pedir para auditar/refatorar a arquitetura de um projeto, ou invocar "/refactor-arch" explicitamente.
+---
+
 # Refactor Architecture Skill (`/refactor-arch`)
 
 ## Overview

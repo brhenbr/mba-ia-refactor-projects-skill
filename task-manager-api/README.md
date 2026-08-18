@@ -1,6 +1,6 @@
 # task-manager-api
 
-API de Task Manager em Python/Flask, refatorada com o framework `refactor-arch` a partir de um estado com autenticação ausente, senhas em MD5, credenciais hardcoded e N+1 queries. Ver `AUDIT_REPORT.md` para o relatório completo antes/depois.
+API de Task Manager em Python/Flask, refatorada com o framework `refactor-arch` a partir de um estado com autenticação ausente, senhas em MD5, credenciais hardcoded e N+1 queries. Ver [`../reports/audit-project-3.md`](../reports/audit-project-3.md) para o relatório completo antes/depois.
 
 ## Arquitetura
 

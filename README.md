@@ -46,7 +46,17 @@ Antes de construir a skill, cada projeto foi analisado manualmente para identifi
 - **Arquivo:** `models.py` (linhas 187-200 e 219-232)
 - **Explicação:** Para cada pedido retornado, faz uma query adicional para cada item. Se retorna 100 pedidos com 5 itens cada = 500+ queries! Deveria usar JOIN.
 
-**Resumo dos impactos:** perda de dados (`reset-db`), roubo de credenciais (senhas em texto plano + secret exposta), acesso não autorizado (SQL injection), performance degradada (N+1 queries).
+#### 🔵 LOW
+
+**7. Magic numbers na regra de desconto**
+- **Arquivo:** `models.py` (linhas 256-262 — `relatorio_vendas`)
+- **Explicação:** Os limiares de faturamento (`10000`, `5000`, `1000`) e os percentuais de desconto (`0.1`, `0.05`, `0.02`) estão soltos no meio do `if/elif`, sem constante nomeada explicando o porquê de cada valor. Dificulta ajustar a regra de negócio com segurança.
+
+**8. Uso de `print()` em vez do módulo `logging`**
+- **Arquivo:** `controllers.py` (linhas 8, 11, 57, 61, 106, 161, 179, 182, 208-210, 219, 248, 250)
+- **Explicação:** Toda a aplicação usa `print()` para registrar eventos e erros em vez do módulo `logging` — sem níveis (INFO/WARNING/ERROR), sem timestamps estruturados, impossível de desativar/redirecionar em produção.
+
+**Resumo dos impactos:** perda de dados (`reset-db`), roubo de credenciais (senhas em texto plano + secret exposta), acesso não autorizado (SQL injection), performance degradada (N+1 queries), observabilidade ruim em produção (`print()` sem logging estruturado).
 
 ---
 
@@ -235,3 +245,126 @@ Causa raiz: `architecture-rules.md` só tinha exemplo de Models em Python/SQLAlc
 4. **`architecture-rules.md` reforçado** com um exemplo completo de Model sem ORM (classe + `fromRow(row)` estático, em JavaScript), um contraste explícito "❌ repository devolvendo row crua" vs. "✅ repository devolvendo entidade", e a frase "esta camada é obrigatória mesmo sem ORM". `heuristics.md` ganhou uma checklist item + red flag específicos (grep por `return this.db.get(`/`return this.db.all(` sem transformação no meio). `SKILL.md` (Fase 3) passou a exigir esse grep antes de declarar a fase concluída. Reforço sincronizado nos 3 projetos.
 5. **Criado `ecommerce-api-legacy/src/models/`** com 4 classes de domínio (`User`, `Course`, `Enrollment`, `Payment`), cada uma com `fromRow(row)`. Os 4 repositories relevantes (`courseRepository`, `userRepository`, `enrollmentRepository`, `paymentRepository`) passaram a montar essas entidades em vez de devolver `row`/`lastID` crus; `checkoutService`/`authService` atualizados para consumir as entidades (`user.verifyPassword()`, `user.toPublicJSON()`, `enrollment.id`).
 6. **Skill executada novamente nos 3 projetos**: `code-smells-project` e `task-manager-api` já usam ORM (SQLAlchemy) — confirmado que suas queries já retornam instâncias de `models/`, nenhum finding novo. `ecommerce-api-legacy` teve o finding (HIGH: camada de Models ausente) corrigido e validado (21 testes passando, boot limpo, checkout ponta-a-ponta testado via curl). Reportado em detalhe em `reports/audit-project-2.md`.
+
+---
+
+## 5. Checklist de Validação
+
+Checklist do enunciado, preenchido com o resultado observado nos 3 projetos (estado atual, após as duas rodadas de correção):
+
+**Fase 1 — Análise**
+- [x] Linguagem detectada corretamente (Python nos projetos 1 e 3, JavaScript/Node.js no projeto 2)
+- [x] Framework detectado corretamente (Flask 3.1.1 nos projetos 1 e 3, Express 4.18.2 no projeto 2)
+- [x] Domínio da aplicação descrito corretamente (e-commerce, LMS/checkout, task manager)
+- [x] Número de arquivos analisados condiz com a realidade (~30 no projeto 1, 24 no projeto 2, ~25 no projeto 3 — ver seção "Fase 1" de cada `reports/audit-project-N.md`)
+
+**Fase 2 — Auditoria**
+- [x] Relatório segue o template definido em `report-template.md` (Executive Summary, score, tabela de findings, "o que foi feito", decisões, pendências, testes)
+- [x] Cada finding tem arquivo e linhas exatos
+- [x] Findings ordenados por severidade (CRITICAL → LOW)
+- [x] Mínimo de 5 findings identificados (13 / 10 / 13 nos projetos 1 / 2 / 3, respectivamente)
+- [x] Detecção de APIs deprecated incluída — catálogo cobre a checagem nos 3 projetos; achado real apenas no projeto 3 (`datetime.utcnow()`, 16 ocorrências)
+- [x] Skill pausa e pede confirmação antes da Fase 3 (`Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]` — gate explícito em `SKILL.md`, exercitado nas reauditorias registradas em `reports/`)
+
+**Fase 3 — Refatoração**
+- [x] Estrutura de diretórios segue padrão MVC/camadas nos 3 projetos
+- [x] Configuração extraída para módulo de config, sem hardcoded (`config.py`/`config/index.js`, lendo de `.env`)
+- [x] Models criados para abstrair dados — SQLAlchemy nos projetos 1/3; classes de domínio próprias (`User`/`Course`/`Enrollment`/`Payment`) no projeto 2
+- [x] Views/Routes separadas para roteamento (`routes/`)
+- [x] Controllers/Services concentram o fluxo da aplicação (`services/`)
+- [x] Error handling centralizado (`middleware/error_handler.py` / `middleware/errorHandler.js`)
+- [x] Entry point claro (`app.py` / `src/server.js`)
+- [x] Aplicação inicia sem erros nos 3 projetos
+- [x] Endpoints originais respondem corretamente nos 3 projetos
+
+---
+
+## 6. Como Executar
+
+### Pré-requisitos
+
+- **Projetos 1 e 3** (`code-smells-project/`, `task-manager-api/`): Python 3.11+ e `pip`
+- **Projeto 2** (`ecommerce-api-legacy/`): Node.js 18+ e `npm`
+- Claude Code instalado, para rodar a skill (`claude "/refactor-arch"`) — não é necessário para apenas subir/testar as aplicações já refatoradas
+
+### Rodar cada aplicação já refatorada
+
+```bash
+# Projeto 1 — code-smells-project (Flask)
+cd code-smells-project
+python -m venv .venv && .venv/Scripts/activate   # source .venv/bin/activate no Linux/Mac
+pip install -r requirements.txt
+cp .env.example .env   # preencher SECRET_KEY e JWT_SECRET_KEY (ver instruções no .env.example)
+python app.py          # sobe em http://localhost:5000
+
+# Projeto 2 — ecommerce-api-legacy (Express)
+cd ecommerce-api-legacy
+npm install
+cp .env.example .env
+npm start               # sobe em http://localhost:3000
+
+# Projeto 3 — task-manager-api (Flask)
+cd task-manager-api
+python -m venv .venv && .venv/Scripts/activate
+pip install -r requirements.txt
+cp .env.example .env
+python seed.py           # popula dados de exemplo (obrigatório antes do primeiro boot)
+python app.py            # sobe em http://localhost:5000
+```
+
+Detalhes de autenticação, usuários de exemplo e rotas públicas/protegidas de cada projeto estão no `README.md` de cada um (`code-smells-project/README.md`, `ecommerce-api-legacy/README.md`, `task-manager-api/README.md`).
+
+### Rodar a suíte de testes de cada projeto
+
+```bash
+cd code-smells-project    && pytest -q      # 28 passed
+cd ecommerce-api-legacy   && npm test       # 21 passed
+cd task-manager-api       && pytest -q      # 61 passed
+```
+
+### Rodar a skill novamente (Fases 1-3)
+
+```bash
+cd code-smells-project   && claude "/refactor-arch"
+cd ecommerce-api-legacy  && claude "/refactor-arch"
+cd task-manager-api      && claude "/refactor-arch"
+```
+
+### Como foi validado que a refatoração funciona (evidência real, capturada durante a auditoria)
+
+Boot + endpoint real, e resultado da suíte de testes, para os 3 projetos no estado atual do repositório:
+
+```text
+# code-smells-project
+$ pytest tests/ -q
+............................                                             [100%]
+28 passed, 35 warnings in 81.50s
+
+$ python app.py &
+GET /health   -> 200
+GET /produtos -> 200
+
+# ecommerce-api-legacy
+$ npm test
+PASS tests/admin.test.js
+PASS tests/security.test.js
+PASS tests/checkout.test.js
+PASS tests/auth.test.js
+Tests: 21 passed, 21 total
+
+$ node src/server.js &
+GET  /health              -> 200
+POST /api/auth/login      -> 200 {"token":"...","user":{"id":1,"name":"Leonan","email":"leonan@fullcycle.com.br","role":"admin"}}
+POST /api/checkout        -> 200 {"message":"Sucesso","enrollmentId":2}
+
+# task-manager-api
+$ pytest -q
+.............................................................            [100%]
+61 passed, 78 warnings in 110.23s
+
+$ python app.py &
+GET /health            -> 200
+GET /tasks (sem token) -> 401   # confirma que a autenticação continua obrigatória
+```
+
+Nenhum dos três apps precisou de correção manual para subir — os `DeprecationWarning`/warnings de teste restantes (`InsecureKeyLengthWarning` do PyJWT, sobre o tamanho da chave de teste) são esperados e não relacionados às refatorações aplicadas.

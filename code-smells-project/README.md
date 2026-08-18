@@ -1,6 +1,6 @@
 # code-smells-project
 
-API de E-commerce em Python/Flask, refatorada com o framework `refactor-arch` a partir de um estado legado com múltiplas vulnerabilidades críticas (SQL Injection, credenciais hardcoded, sem autenticação, senhas em texto plano, N+1 queries). Ver `AUDIT_REPORT.md` para o relatório completo antes/depois.
+API de E-commerce em Python/Flask, refatorada com o framework `refactor-arch` a partir de um estado legado com múltiplas vulnerabilidades críticas (SQL Injection, credenciais hardcoded, sem autenticação, senhas em texto plano, N+1 queries). Ver [`../reports/audit-project-1.md`](../reports/audit-project-1.md) para o relatório completo antes/depois.
 
 ## Arquitetura
 
